@@ -102,7 +102,7 @@ with GBD(db_path) as gbd:
 
     print("Starting clustering...")
 
-    clustering.cluster(instances_list_s,  0, 1, 2, "AFFINITY")
+    clustering.cluster(instances_list_s, 'n_vars', 'n_gates', 'n_roots', features, "KMEANS")
 
     # gbd_eval.par2(gbd, "competition_track=main_2020", ["kissat_sat", "relaxed_newtech"], 5000, None)
     # print(gbd.query_search("competition_track = main_2020", [], ["family"]))
