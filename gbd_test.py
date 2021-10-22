@@ -7,6 +7,8 @@ from numpy import where
 from numpy import unique
 from matplotlib import pyplot
 
+import clustering
+import util
 
 db_path = os.environ["DBPATH"] + "meta.db" + os.pathsep + \
           os.environ["DBPATH"] + "base.db" + os.pathsep + \
@@ -85,22 +87,22 @@ with GBD(db_path) as gbd:
                 inst[i] = float(inst[i])
 
     print("Merge finished")
+
+    # scaling
+    print("Start scaling...")
+
+    instances_list_t = list(map(list, zip(*instances_list)))
+    instances_list_t_s = []
+    for j in instances_list_t:
+        l_s = util.scaleArrayTo01(j)
+        instances_list_t_s.append(l_s)
+
+    instances_list_s = list(map(list, zip(*instances_list_t_s)))
+    print("Scaling finished")
+
     print("Starting clustering...")
 
-    model = DBSCAN(eps=10000, min_samples=10)
-    model.fit(instances_list)
-    yhat = model.labels_
-    clusters = unique(yhat)
-
-    print(clusters)
-
-    for cluster in clusters:
-        row_ix = where(yhat == cluster)
-        instances_list = np.array(instances_list)
-        pyplot.scatter(instances_list[row_ix][2], instances_list[row_ix][3])
-
-    print("Clustering finished")
-    pyplot.show()
+    clustering.cluster(instances_list_s,  0, 1, 2, "AFFINITY")
 
     # gbd_eval.par2(gbd, "competition_track=main_2020", ["kissat_sat", "relaxed_newtech"], 5000, None)
     # print(gbd.query_search("competition_track = main_2020", [], ["family"]))
