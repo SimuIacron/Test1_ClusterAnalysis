@@ -7,3 +7,6 @@ def scaleArrayTo01(array):
         scaled_array = [0] * len(array)
 
     return scaled_array
+
+def rotateNestedLists(nested_list):
+    return list(map(list, zip(*nested_list)))

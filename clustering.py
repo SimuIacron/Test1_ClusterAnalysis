@@ -4,8 +4,10 @@ import numpy as np
 from matplotlib import pyplot
 import pandas as pd
 import plotly.express as px
+import util
 
-from sklearn.cluster import DBSCAN, KMeans, AffinityPropagation
+from sklearn.cluster import DBSCAN, KMeans, AffinityPropagation, MeanShift, SpectralClustering, AgglomerativeClustering,\
+    OPTICS, Birch
 
 
 def cluster(instances_list, axis1, axis2, axis3, features, algorithm="DBSCAN"):
@@ -17,6 +19,26 @@ def cluster(instances_list, axis1, axis2, axis3, features, algorithm="DBSCAN"):
         yhat = model.labels_
     elif algorithm == "AFFINITY":
         model = AffinityPropagation()
+        model.fit(instances_list)
+        yhat = model.labels_
+    elif algorithm == "MEANSHIFT":
+        model = MeanShift()
+        model.fit(instances_list)
+        yhat = model.labels_
+    elif algorithm == "SPECTRAL":
+        model = SpectralClustering()
+        model.fit(instances_list)
+        yhat = model.labels_
+    elif algorithm == "AGGLOMERATIVE":
+        model = AgglomerativeClustering()
+        model.fit(instances_list)
+        yhat = model.labels_
+    elif algorithm == "OPTICS":
+        model = OPTICS()
+        model.fit(instances_list)
+        yhat = model.labels_
+    elif algorithm == "BIRCH":
+        model = Birch()
         model.fit(instances_list)
         yhat = model.labels_
     elif algorithm == "DBSCAN":
@@ -41,7 +63,7 @@ def cluster(instances_list, axis1, axis2, axis3, features, algorithm="DBSCAN"):
     #            z_axis.append(instances_list[i][index3])
 
     #       pyplot.scatter(x_axis, y_axis) #, z_axis)
-    values = list(map(list, zip(*instances_list)))
+    values = util.rotateNestedLists(instances_list)
 
     index1 = features.index(axis1)
     index2 = features.index(axis2)
@@ -54,5 +76,6 @@ def cluster(instances_list, axis1, axis2, axis3, features, algorithm="DBSCAN"):
     fig.show()
 
     print("Clustering finished")
-    print(clusters)
+
+    return clusters, yhat
     # pyplot.show()

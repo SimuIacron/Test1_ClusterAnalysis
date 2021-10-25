@@ -3,9 +3,12 @@ import os
 import numpy as np
 from sklearn.cluster import DBSCAN
 from gbd_tool.gbd_api import GBD
+from numpy import median
+from numpy import mean
 from numpy import where
 from numpy import unique
 from matplotlib import pyplot
+import plotly.graph_objects as go
 
 import clustering
 import util
@@ -14,6 +17,8 @@ db_path = os.environ["DBPATH"] + "meta.db" + os.pathsep + \
           os.environ["DBPATH"] + "base.db" + os.pathsep + \
           os.environ["DBPATH"] + "gate.db" + os.pathsep + \
           os.environ["DBPATH"] + "sc2020.db"
+
+timeout_value = 5000
 
 gate_features = ['n_vars', 'n_gates', 'n_roots', 'n_none', 'n_generic', 'n_mono', 'n_and', 'n_or', 'n_triv', 'n_equiv',
                  'n_full', 'levels_mean', 'levels_variance', 'levels_min', 'levels_max', 'levels_entropy',
@@ -45,12 +50,27 @@ base_features = ['clauses', 'variables', 'clause_size_1', 'clause_size_2', 'clau
                  'cg_degrees_variance', 'cg_degrees_min', 'cg_degrees_max', 'cg_degrees_entropy',
                  'base_features_runtime']
 
+solver_features = ['cadical_sc2020', 'duriansat', 'exmaple_padc_dl', 'exmaple_padc_dl_ovau_exp',
+                   'exmaple_padc_dl_ovau_lin',
+                   'exmaple_psids_dl', 'kissat', 'kissat_sat', 'kissat_unsat', 'maple_scavel', 'maple_alluip_trail',
+                   'maple_lrb_vsids_2_init', 'maplecomsps_lrb_vsids_2', 'maple_scavel01', 'maple_scavel02',
+                   'maple_dl_f2trc',
+                   'maplelcmdistchronobt_dl_v3', 'maple_f2trc', 'maple_f2trc_s', 'maple_cm_dist',
+                   'maple_cm_dist_sattime2s',
+                   'maple_cm_dist_simp2', 'maple_cmused_dist', 'maple_mix', 'maple_simp', 'parafrost', 'parafrost_cbt',
+                   'pausat', 'relaxed', 'relaxed_newtech', 'relaxed_notimepara', 'slime', 'undominated_top16',
+                   'undominated_top24', 'undominated_top36', 'undominated', 'cadical_alluip', 'cadical_alluip_trail',
+                   'cadical_trail', 'cryptominisat_ccnr', 'cryptominisat_ccnr_lsids', 'cryptominisat_walksat',
+                   'exp_l_mld_cbt_dl', 'exp_v_lgb_mld_cbt_dl', 'exp_v_l_mld_cbt_dl', 'exp_v_mld_cbt_dl', 'glucose3',
+                   'upglucose_3_padc']
+
 with GBD(db_path) as gbd:
     print("Starting queries...")
 
     # make separate queries, because a max of 64 table joins are allowed in sql
     base_return = gbd.query_search("competition_track = main_2020", [], base_features)
     gate_return = gbd.query_search("competition_track = main_2020", [], gate_features)
+    solver_return = gbd.query_search("competition_track = main_2020", [], solver_features)
     print("Queries finished")
     print("Merge query results...")
 
@@ -66,15 +86,15 @@ with GBD(db_path) as gbd:
 
     gate_return_without_hash = [el[1:] for el in gate_return]
     base_return_without_hash = [el[1:] for el in base_return]
+    solver_return_without_hash = [el[1:] for el in solver_return]
     for i in range(len(base_return)):
-        # make sure both lists are ordered the same way
-        if base_return[i][0] != gate_return[i][0]:
+        # make sure all lists are ordered the same way
+        if base_return[i][0] != gate_return[i][0] and base_return[i][0] != solver_return[i][0]:
             raise AssertionError()
         instance_hash.append(base_return[i])
         instances.append(base_return_without_hash[i] + gate_return_without_hash[i])
 
     instances_list = [list(i) for i in instances]
-
 
     # remove empty and memout keywords and replaces them with 0
     # TODO find out what the best replacement is, 0 could be wrong and give wrong cluster results
@@ -91,20 +111,36 @@ with GBD(db_path) as gbd:
     # scaling
     print("Start scaling...")
 
-    instances_list_t = list(map(list, zip(*instances_list)))
+    instances_list_t = util.rotateNestedLists(instances_list)
     instances_list_t_s = []
     for j in instances_list_t:
         l_s = util.scaleArrayTo01(j)
         instances_list_t_s.append(l_s)
 
-    instances_list_s = list(map(list, zip(*instances_list_t_s)))
+    instances_list_s = util.rotateNestedLists(instances_list_t_s)
     print("Scaling finished")
 
     print("Starting clustering...")
 
-    clustering.cluster(instances_list_s, 'n_vars', 'n_gates', 'n_roots', features, "KMEANS")
+    (clusters, yhat) = clustering.cluster(instances_list_s, 'n_vars', 'n_gates', 'n_roots', features, "BIRCH")
 
-    # gbd_eval.par2(gbd, "competition_track=main_2020", ["kissat_sat", "relaxed_newtech"], 5000, None)
-    # print(gbd.query_search("competition_track = main_2020", [], ["family"]))
-    # scatter(gbd, "competition_track = main_2020", ["kissat_sat", "cryptominisat_ccnr_lsids"], 5000,
-    #        ["family=antibandwidth", "family = coloring", "family = tensors"])
+    for cluster in clusters:
+        timelist = []
+        cluster_amount = 0
+        for i in range(len(yhat)):
+            if yhat[i] == cluster:
+                cluster_amount = cluster_amount + 1
+                insert = [timeout_value if (x == 'timeout' or x == 'failed') else float(x) for x in solver_return_without_hash[i]]
+                timelist.append(insert)
+
+        timelist_s = util.rotateNestedLists(timelist)
+        median_list = [median(x) for x in timelist_s]
+        mean_list = [mean(x) for x in timelist_s]
+
+        fig = go.Figure(data=[
+            go.Bar(name='Median', x=solver_features, y=median_list),
+            go.Bar(name='Mean', x=solver_features, y=mean_list)
+        ])
+        # Change the bar mode
+        fig.update_layout(barmode='group', title=cluster_amount)
+        fig.show()
