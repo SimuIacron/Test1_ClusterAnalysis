@@ -4,6 +4,8 @@ import numpy as np
 from matplotlib import pyplot
 import pandas as pd
 import plotly.express as px
+from sklearn.mixture import GaussianMixture
+
 import util
 from sklearn.cluster import DBSCAN, KMeans, AffinityPropagation, MeanShift, SpectralClustering, AgglomerativeClustering, \
     OPTICS, Birch
@@ -32,12 +34,17 @@ def cluster(instances_list, axis1, axis2, features, algorithm="DBSCAN"):
         model = OPTICS()
     elif algorithm == "BIRCH":
         model = Birch()
+    elif algorithm == "GAUSSIAN":
+        model = GaussianMixture(n_components=5)
     else:  # algorithm == "DBSCAN":
         model = DBSCAN(eps=0.2, min_samples=10)
 
     # fit model and extract clusters
     model.fit(instances_list)
-    yhat = model.labels_
+    if algorithm == "GAUSSIAN":
+        yhat = model.predict(instances_list)
+    else:
+        yhat = model.labels_
     clusters = unique(yhat)
 
     # rotate list, to make it easier to work with for plotting
@@ -48,8 +55,6 @@ def cluster(instances_list, axis1, axis2, features, algorithm="DBSCAN"):
     df = pd.DataFrame(dict(a=values[index1], b=values[index2], c=yhat))
     fig = px.scatter(df, x='a', y='b', color='c')
     fig.show()
-
-    print("Clustering finished")
 
     # return clusters and the mapping of each instance to the cluster
     return clusters, yhat

@@ -9,6 +9,8 @@ from numpy import where
 from numpy import unique
 from matplotlib import pyplot
 import plotly.graph_objects as go
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 import clustering
 import util
@@ -114,21 +116,30 @@ with GBD(db_path) as gbd:
     # scaling
     print("Start scaling...")
 
+    scaler = StandardScaler()
+    scaler.fit(instances_list)
+    instances_list_s = scaler.transform(instances_list)
+
     # rotate list, so each list contains values of one feature
-    instances_list_t = util.rotateNestedLists(instances_list)
-    instances_list_t_s = []
-    for j in instances_list_t:
-        l_s = util.scaleArrayTo01(j)
-        instances_list_t_s.append(l_s)
+    # instances_list_t = util.rotateNestedLists(instances_list)
+    # instances_list_t_s = []
+    # for j in instances_list_t:
+    #     l_s = util.scaleArrayTo01(j)
+    #     instances_list_t_s.append(l_s)
 
     # undo rotation to get scaled list of the instances
-    instances_list_s = util.rotateNestedLists(instances_list_t_s)
+    # instances_list_s = util.rotateNestedLists(instances_list_t_s)
     print("Scaling finished")
 
     print("Starting clustering...")
 
-    (clusters, yhat) = clustering.cluster(instances_list_s, 'n_vars', 'n_gates', features, "BIRCH")
+    pca = PCA(n_components='mle', svd_solver='full')
+    pca.fit(instances_list_s)
+    pca_instance = pca.transform(instances_list_s)
 
+    (clusters, yhat) = clustering.cluster(pca_instance, 'n_vars', 'n_gates', features, "GAUSSIAN")
+
+    print("Clustering finished")
     # calculate means and median for each cluster
     for cluster in clusters:
         # stores the times of the instances in the current cluster

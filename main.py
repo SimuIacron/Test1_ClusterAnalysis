@@ -1,30 +1,67 @@
 
 
-from gbd_tool.gbd_api import GBD
-import os
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.neighbors import KNeighborsClassifier, NeighborhoodComponentsAnalysis
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
-import util
+n_neighbors = 3
+random_state = 0
 
-print(util.scaleArrayTo01([3,5,7]))
+# Load Digits dataset
+X, y = datasets.load_digits(return_X_y=True)
 
-solvers = ['cadical_sc2020', 'duriansat', 'exmaple_padc_dl', 'exmaple_padc_dl_ovau_exp', 'exmaple_padc_dl_ovau_lin',
-           'exmaple_psids_dl', 'kissat', 'kissat_sat', 'kissat_unsat', 'maple_scavel', 'maple_alluip_trail',
-           'maple_lrb_vsids_2_init', 'maplecomsps_lrb_vsids_2', 'maple_scavel01', 'maple_scavel02', 'maple_dl_f2trc',
-           'maplelcmdistchronobt_dl_v3', 'maple_f2trc', 'maple_f2trc_s', 'maple_cm_dist', 'maple_cm_dist_sattime2s',
-           'maple_cm_dist_simp2', 'maple_cmused_dist', 'maple_mix', 'maple_simp', 'parafrost', 'parafrost_cbt',
-           'pausat', 'relaxed', 'relaxed_newtech', 'relaxed_notimepara', 'slime', 'undominated_top16',
-           'undominated_top24', 'undominated_top36', 'undominated', 'cadical_alluip', 'cadical_alluip_trail',
-           'cadical_trail', 'cryptominisat_ccnr', 'cryptominisat_ccnr_lsids', 'cryptominisat_walksat',
-           'exp_l_mld_cbt_dl', 'exp_v_lgb_mld_cbt_dl', 'exp_v_l_mld_cbt_dl', 'exp_v_mld_cbt_dl', 'glucose3',
-           'upglucose_3_padc']
+# Split into train/test
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.5, stratify=y, random_state=random_state
+)
 
+dim = len(X[0])
+n_classes = len(np.unique(y))
 
-db_path = os.environ["DBPATH"] + "meta.db" + os.pathsep + \
-          os.environ["DBPATH"] + "base.db" + os.pathsep + \
-          os.environ["DBPATH"] + "gate.db" + os.pathsep + \
-          os.environ["DBPATH"] + "sc2020.db"
+# Reduce dimension to 2 with PCA
+pca = make_pipeline(StandardScaler(), PCA(n_components=2, random_state=random_state))
 
-with GBD(db_path) as gbd:
-    base_return = gbd.query_search("competition_track = main_2020", [], solvers)
-    print(base_return)
+# Reduce dimension to 2 with LinearDiscriminantAnalysis
+lda = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis(n_components=2))
 
+# Reduce dimension to 2 with NeighborhoodComponentAnalysis
+nca = make_pipeline(
+    StandardScaler(),
+    NeighborhoodComponentsAnalysis(n_components=2, random_state=random_state),
+)
+
+# Use a nearest neighbor classifier to evaluate the methods
+knn = KNeighborsClassifier(n_neighbors=n_neighbors)
+
+# Make a list of the methods to be compared
+dim_reduction_methods = [("PCA", pca), ("LDA", lda), ("NCA", nca)]
+
+# plt.figure()
+for i, (name, model) in enumerate(dim_reduction_methods):
+    plt.figure()
+    # plt.subplot(1, 3, i + 1, aspect=1)
+
+    # Fit the method's model
+    model.fit(X_train, y_train)
+
+    # Fit a nearest neighbor classifier on the embedded training set
+    knn.fit(model.transform(X_train), y_train)
+
+    # Compute the nearest neighbor accuracy on the embedded test set
+    acc_knn = knn.score(model.transform(X_test), y_test)
+
+    # Embed the data set in 2 dimensions using the fitted model
+    X_embedded = model.transform(X)
+
+    # Plot the projected points and show the evaluation score
+    plt.scatter(X_embedded[:, 0], X_embedded[:, 1], c=y, s=30, cmap="Set1")
+    plt.title(
+        "{}, KNN (k={})\nTest accuracy = {:.2f}".format(name, n_neighbors, acc_knn)
+    )
+plt.show()
