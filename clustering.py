@@ -16,7 +16,7 @@ from sklearn.cluster import DBSCAN, KMeans, AffinityPropagation, MeanShift, Spec
 # axis1: feature that is used as the x axis in the plot
 # axis2: feature that is used as the y axis in the plot
 # algorithm: The cluster algorithm
-def cluster(instances_list, axis1, axis2, features, algorithm="DBSCAN"):
+def cluster(instances_list, algorithm="DBSCAN"):
     print("Starting clustering...")
 
     # select clustering algorithm
@@ -46,15 +46,6 @@ def cluster(instances_list, axis1, axis2, features, algorithm="DBSCAN"):
     else:
         yhat = model.labels_
     clusters = unique(yhat)
-
-    # rotate list, to make it easier to work with for plotting
-    values = util.rotateNestedLists(instances_list)
-    index1 = features.index(axis1)
-    index2 = features.index(axis2)
-
-    df = pd.DataFrame(dict(a=values[index1], b=values[index2], c=yhat))
-    fig = px.scatter(df, x='a', y='b', color='c')
-    fig.show()
 
     # return clusters and the mapping of each instance to the cluster
     return clusters, yhat

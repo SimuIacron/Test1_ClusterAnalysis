@@ -5,6 +5,9 @@ from sklearn.cluster import DBSCAN
 from gbd_tool.gbd_api import GBD
 from numpy import median
 from numpy import mean
+from numpy import argmin
+import pandas as pd
+import plotly.express as px
 from numpy import where
 from numpy import unique
 from matplotlib import pyplot
@@ -101,6 +104,10 @@ with GBD(db_path) as gbd:
     # list of all base and gate features of all instances
     instances_list = [list(i) for i in instances]
 
+    for i in range(len(solver_return_without_hash)):
+        solver_return_without_hash[i] = [timeout_value if (x == 'timeout' or x == 'failed') else float(x) for x in
+                                         solver_return_without_hash[i]]
+
     # remove empty and memout keywords and replaces them with 0
     # TODO find out what the best replacement is, 0 could be wrong and give wrong cluster results
     features = base_features + gate_features
@@ -137,7 +144,18 @@ with GBD(db_path) as gbd:
     pca.fit(instances_list_s)
     pca_instance = pca.transform(instances_list_s)
 
-    (clusters, yhat) = clustering.cluster(pca_instance, 'n_vars', 'n_gates', features, "GAUSSIAN")
+    (clusters, yhat) = clustering.cluster(pca_instance, "KMEANS")
+
+    best_solver_time = [min(elem) for elem in solver_return_without_hash]
+    best_solver = [solver_features[argmin(elem)] for elem in solver_return_without_hash]
+
+    scatter_values = util.rotateNestedLists(pca_instance)
+    df = pd.DataFrame(dict(axis1=scatter_values[0], axis2=scatter_values[1], cluster=yhat, solver_time=best_solver_time,
+                           solver=best_solver))
+    df["cluster"] = df["cluster"].astype(str)
+    fig = px.scatter(df, x='axis1', y='axis2', color='cluster', size='solver_time', hover_data=['solver'])
+    fig.show()
+
 
     print("Clustering finished")
     # calculate means and median for each cluster
@@ -150,7 +168,7 @@ with GBD(db_path) as gbd:
             if yhat[i] == cluster:
                 cluster_amount = cluster_amount + 1
                 # replace timeout and failed for the set timeout_value
-                insert = [timeout_value if (x == 'timeout' or x == 'failed') else float(x) for x in solver_return_without_hash[i]]
+                insert = solver_return_without_hash[i]
                 timelist.append(insert)
 
         # rotate list to get lists for each algorithm and calculate it's median and mean time
