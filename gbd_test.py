@@ -13,11 +13,13 @@ import plotly.graph_objects as go
 import clustering
 import util
 
+# path to the databases
 db_path = os.environ["DBPATH"] + "meta.db" + os.pathsep + \
           os.environ["DBPATH"] + "base.db" + os.pathsep + \
           os.environ["DBPATH"] + "gate.db" + os.pathsep + \
           os.environ["DBPATH"] + "sc2020.db"
 
+# value used to replace the timeout and failure value in solve times
 timeout_value = 5000
 
 gate_features = ['n_vars', 'n_gates', 'n_roots', 'n_none', 'n_generic', 'n_mono', 'n_and', 'n_or', 'n_triv', 'n_equiv',
@@ -81,7 +83,7 @@ with GBD(db_path) as gbd:
     # contains the hashes of the instances in the same order of the instance list
     instance_hash = []
 
-    if len(base_return) != len(gate_return):
+    if len(base_return) != len(gate_return) or len(base_return) != len(solver_return):
         raise AssertionError()
 
     gate_return_without_hash = [el[1:] for el in gate_return]
@@ -94,6 +96,7 @@ with GBD(db_path) as gbd:
         instance_hash.append(base_return[i])
         instances.append(base_return_without_hash[i] + gate_return_without_hash[i])
 
+    # list of all base and gate features of all instances
     instances_list = [list(i) for i in instances]
 
     # remove empty and memout keywords and replaces them with 0
@@ -111,32 +114,40 @@ with GBD(db_path) as gbd:
     # scaling
     print("Start scaling...")
 
+    # rotate list, so each list contains values of one feature
     instances_list_t = util.rotateNestedLists(instances_list)
     instances_list_t_s = []
     for j in instances_list_t:
         l_s = util.scaleArrayTo01(j)
         instances_list_t_s.append(l_s)
 
+    # undo rotation to get scaled list of the instances
     instances_list_s = util.rotateNestedLists(instances_list_t_s)
     print("Scaling finished")
 
     print("Starting clustering...")
 
-    (clusters, yhat) = clustering.cluster(instances_list_s, 'n_vars', 'n_gates', 'n_roots', features, "BIRCH")
+    (clusters, yhat) = clustering.cluster(instances_list_s, 'n_vars', 'n_gates', features, "BIRCH")
 
+    # calculate means and median for each cluster
     for cluster in clusters:
+        # stores the times of the instances in the current cluster
         timelist = []
+        # counts how many elements are in the cluster
         cluster_amount = 0
         for i in range(len(yhat)):
             if yhat[i] == cluster:
                 cluster_amount = cluster_amount + 1
+                # replace timeout and failed for the set timeout_value
                 insert = [timeout_value if (x == 'timeout' or x == 'failed') else float(x) for x in solver_return_without_hash[i]]
                 timelist.append(insert)
 
+        # rotate list to get lists for each algorithm and calculate it's median and mean time
         timelist_s = util.rotateNestedLists(timelist)
         median_list = [median(x) for x in timelist_s]
         mean_list = [mean(x) for x in timelist_s]
 
+        # plot median and mean times for each cluster
         fig = go.Figure(data=[
             go.Bar(name='Median', x=solver_features, y=median_list),
             go.Bar(name='Mean', x=solver_features, y=mean_list)

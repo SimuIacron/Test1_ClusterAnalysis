@@ -3,6 +3,10 @@
 from gbd_tool.gbd_api import GBD
 import os
 
+import util
+
+print(util.scaleArrayTo01([3,5,7]))
+
 solvers = ['cadical_sc2020', 'duriansat', 'exmaple_padc_dl', 'exmaple_padc_dl_ovau_exp', 'exmaple_padc_dl_ovau_lin',
            'exmaple_psids_dl', 'kissat', 'kissat_sat', 'kissat_unsat', 'maple_scavel', 'maple_alluip_trail',
            'maple_lrb_vsids_2_init', 'maplecomsps_lrb_vsids_2', 'maple_scavel01', 'maple_scavel02', 'maple_dl_f2trc',
