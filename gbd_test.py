@@ -15,7 +15,9 @@ import plotly.graph_objects as go
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
+import biclustering
 import clustering
+import feature_reduction
 import util
 
 # path to the databases
@@ -140,16 +142,24 @@ with GBD(db_path) as gbd:
 
     print("Starting clustering...")
 
-    pca = PCA(n_components='mle', svd_solver='full')
-    pca.fit(instances_list_s)
-    pca_instance = pca.transform(instances_list_s)
+    # reduce dimensions
+    reduced_instance_list = feature_reduction.featureReduction(instances_list_s, features=None)
 
-    (clusters, yhat) = clustering.cluster(pca_instance, "KMEANS")
+    # fig = px.imshow(util.rotateNestedLists(pca_instance))
+    # fig.show()
+
+    # biclustering
+    fit_data = biclustering.bicluster(reduced_instance_list, "SPECTRALBI")
+    fig = px.imshow(util.rotateNestedLists(fit_data))
+    fig.show()
+
+    # clustering
+    (clusters, yhat) = clustering.cluster(reduced_instance_list, "KMEANS")
 
     best_solver_time = [min(elem) for elem in solver_return_without_hash]
     best_solver = [solver_features[argmin(elem)] for elem in solver_return_without_hash]
 
-    scatter_values = util.rotateNestedLists(pca_instance)
+    scatter_values = util.rotateNestedLists(reduced_instance_list)
     df = pd.DataFrame(dict(axis1=scatter_values[0], axis2=scatter_values[1], cluster=yhat, solver_time=best_solver_time,
                            solver=best_solver))
     df["cluster"] = df["cluster"].astype(str)
