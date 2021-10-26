@@ -1,15 +1,17 @@
 from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.neighbors import KNeighborsClassifier, NeighborhoodComponentsAnalysis
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.random_projection import GaussianRandomProjection, SparseRandomProjection
 
 
-def featureReduction(data, features=None):
-    if features is None:
-        model = PCA(n_components="mle", svd_solver="full")
-    else:
-        model = PCA(n_components=features)
+def featureReduction(data, algorithm="PCA", features=None):
+    if algorithm == "SPARSE":
+        model = SparseRandomProjection(n_components=features)
+    elif algorithm == "GAUSSIAN":
+        model = GaussianRandomProjection(n_components=features)
+    else:  # algorithm == "PCA
+        if features is None:
+            model = PCA(n_components="mle", svd_solver="full")
+        else:
+            model = PCA(n_components=features)
 
     model.fit(data)
     return model.transform(data)
