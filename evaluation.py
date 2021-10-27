@@ -5,6 +5,26 @@ import util
 import plotly.graph_objects as go
 
 
+def count_family_for_cluster(cluster_idx, yhat, family):
+    familyDict = {}
+    cluster_amount = 0
+    for i in range(len(yhat)):
+        if yhat[i] == cluster_idx:
+            cluster_amount = cluster_amount + 1
+            # replace timeout and failed for the set timeout_value
+            if family[i] in familyDict:
+                familyDict[family[i]] = familyDict[family[i]] + 1
+            else:
+                familyDict[family[i]] = 1
+
+    keys = []
+    values = []
+    for key, value in familyDict.items():
+        keys.append(key[0])
+        values.append(value)
+
+    return keys, values, cluster_amount
+
 def clusters_scatter_plot(yhat, data, solver_time, solver_features):
     best_solver_time = [min(elem) for elem in solver_time]
     best_solver = [solver_features[argmin(elem)] for elem in solver_time]
@@ -45,23 +65,7 @@ def clusters_statistics(cluster_idx, yhat, solver_time, solver_features):
 
 
 def cluster_family_amount(cluster_idx, yhat, family):
-    familyDict = {}
-    cluster_amount = 0
-    for i in range(len(yhat)):
-        if yhat[i] == cluster_idx:
-            cluster_amount = cluster_amount + 1
-            # replace timeout and failed for the set timeout_value
-            if family[i] in familyDict:
-                familyDict[family[i]] = familyDict[family[i]] + 1
-            else:
-                familyDict[family[i]] = 1
-
-    keys = []
-    values = []
-    for key, value in familyDict.items():
-        keys.append(key[0])
-        values.append(value)
-
+    keys, values, cluster_amount = count_family_for_cluster(cluster_idx, yhat, family)
     sorted_keys = [x for _, x in sorted(zip(values, keys))]
     sorted_values = sorted(values)
     sorted_values_ratio = [(value / cluster_amount) for value in sorted_values]
@@ -70,5 +74,20 @@ def cluster_family_amount(cluster_idx, yhat, family):
     fig = px.bar(df, x='axis1', y='axis2', hover_data=['values'])
     fig.update_layout(title=cluster_amount)
     fig.show()
+
+
+def clusters_family_amount(clusters, yhat, family):
+    data = []
+    for cluster in clusters:
+        keys, values, cluster_amount = count_family_for_cluster(cluster, yhat, family)
+        data.append(go.Bar(name=cluster.astype(str), x=keys, y=values))#
+
+    fig = go.Figure(data=data)
+    # Change the bar mode
+    fig.update_layout(barmode='stack')
+    fig.show()
+
+
+
 
 

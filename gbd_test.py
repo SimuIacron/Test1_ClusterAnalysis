@@ -135,7 +135,7 @@ with GBD(db_path) as gbd:
     print("Starting clustering...")
 
     # reduce dimensions
-    reduced_instance_list = feature_reduction.featureReduction(instances_list_s, algorithm="SPARSE", features=50)
+    reduced_instance_list = feature_reduction.featureReduction(instances_list_s, algorithm="PCA", features=50)
 
     # fig = px.imshow(util.rotateNestedLists(pca_instance))
     # fig.show()
@@ -152,6 +152,8 @@ with GBD(db_path) as gbd:
     evaluation.clusters_scatter_plot(yhat, reduced_instance_list, solver_return_without_hash, solver_features)
 
     # calculate means and median for each cluster
-    for cluster in clusters:
-        evaluation.cluster_family_amount(cluster, yhat, family_return_without_hash)
+    #for cluster in clusters:
+        #evaluation.cluster_family_amount(cluster, yhat, family_return_without_hash)
         # evaluation.clusters_statistics(cluster, yhat, solver_return_without_hash, solver_features)
+
+    evaluation.clusters_family_amount(clusters, yhat, family_return_without_hash)
