@@ -135,7 +135,7 @@ with GBD(db_path) as gbd:
     print("Starting clustering...")
 
     # reduce dimensions
-    reduced_instance_list = feature_reduction.featureReduction(instances_list_s, features=None)
+    reduced_instance_list = feature_reduction.featureReduction(instances_list_s, algorithm="SPARSE", features=50)
 
     # fig = px.imshow(util.rotateNestedLists(pca_instance))
     # fig.show()
