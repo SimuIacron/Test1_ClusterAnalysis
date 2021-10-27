@@ -157,3 +157,4 @@ with GBD(db_path) as gbd:
         # evaluation.clusters_statistics(cluster, yhat, solver_return_without_hash, solver_features)
 
     evaluation.clusters_family_amount(clusters, yhat, family_return_without_hash)
+    evaluation.clusters_timeout_amount(clusters, yhat, timeout_value, solver_return_without_hash)

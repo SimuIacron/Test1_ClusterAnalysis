@@ -87,6 +87,33 @@ def clusters_family_amount(clusters, yhat, family):
     fig.update_layout(barmode='stack')
     fig.show()
 
+def clusters_timeout_amount(clusters, yhat, timeout_value, solver_time):
+    not_timeout_list = []
+    timeout_list = []
+    for cluster in clusters:
+        timeout = 0
+        not_timeout = 0
+        for i in range(len(yhat)):
+            if yhat[i] == cluster:
+                if min(solver_time[i]) == timeout_value:
+                    timeout = timeout + 1
+                else:
+                    not_timeout = not_timeout + 1
+
+        timeout_list.append(timeout)
+        not_timeout_list.append(not_timeout)
+
+    fig = go.Figure(data=[
+        go.Bar(name='Timeout', x=clusters, y=timeout_list),
+        go.Bar(name='No Timeout', x=clusters, y=not_timeout_list)
+    ])
+    # Change the bar mode
+    fig.update_layout(barmode='stack')
+    fig.show()
+
+
+
+
 
 
 
