@@ -1,22 +1,11 @@
 import os
-
-import numpy as np
-from sklearn.cluster import DBSCAN
 from gbd_tool.gbd_api import GBD
-from numpy import median
-from numpy import mean
-from numpy import argmin
-import pandas as pd
 import plotly.express as px
-from numpy import where
-from numpy import unique
-from matplotlib import pyplot
-import plotly.graph_objects as go
-from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 import biclustering
 import clustering
+import evaluation
 import feature_reduction
 import util
 
@@ -77,6 +66,7 @@ with GBD(db_path) as gbd:
     print("Starting queries...")
 
     # make separate queries, because a max of 64 table joins are allowed in sql
+    family_return = gbd.query_search("competition_track = main_2020", [], ["family"])
     base_return = gbd.query_search("competition_track = main_2020", [], base_features)
     gate_return = gbd.query_search("competition_track = main_2020", [], gate_features)
     solver_return = gbd.query_search("competition_track = main_2020", [], solver_features)
@@ -96,9 +86,11 @@ with GBD(db_path) as gbd:
     gate_return_without_hash = [el[1:] for el in gate_return]
     base_return_without_hash = [el[1:] for el in base_return]
     solver_return_without_hash = [el[1:] for el in solver_return]
+    family_return_without_hash = [el[1:] for el in family_return]
     for i in range(len(base_return)):
         # make sure all lists are ordered the same way
-        if base_return[i][0] != gate_return[i][0] and base_return[i][0] != solver_return[i][0]:
+        if base_return[i][0] != gate_return[i][0] and base_return[i][0] != solver_return[i][0] and \
+                base_return[i][0] != family_return[i][0]:
             raise AssertionError()
         instance_hash.append(base_return[i])
         instances.append(base_return_without_hash[i] + gate_return_without_hash[i])
@@ -155,42 +147,11 @@ with GBD(db_path) as gbd:
 
     # clustering
     (clusters, yhat) = clustering.cluster(reduced_instance_list, "KMEANS")
-
-    best_solver_time = [min(elem) for elem in solver_return_without_hash]
-    best_solver = [solver_features[argmin(elem)] for elem in solver_return_without_hash]
-
-    scatter_values = util.rotateNestedLists(reduced_instance_list)
-    df = pd.DataFrame(dict(axis1=scatter_values[0], axis2=scatter_values[1], cluster=yhat, solver_time=best_solver_time,
-                           solver=best_solver))
-    df["cluster"] = df["cluster"].astype(str)
-    fig = px.scatter(df, x='axis1', y='axis2', color='cluster', size='solver_time', hover_data=['solver'])
-    fig.show()
-
-
     print("Clustering finished")
+
+    evaluation.clusters_scatter_plot(yhat, reduced_instance_list, solver_return_without_hash, solver_features)
+
     # calculate means and median for each cluster
     for cluster in clusters:
-        # stores the times of the instances in the current cluster
-        timelist = []
-        # counts how many elements are in the cluster
-        cluster_amount = 0
-        for i in range(len(yhat)):
-            if yhat[i] == cluster:
-                cluster_amount = cluster_amount + 1
-                # replace timeout and failed for the set timeout_value
-                insert = solver_return_without_hash[i]
-                timelist.append(insert)
-
-        # rotate list to get lists for each algorithm and calculate it's median and mean time
-        timelist_s = util.rotateNestedLists(timelist)
-        median_list = [median(x) for x in timelist_s]
-        mean_list = [mean(x) for x in timelist_s]
-
-        # plot median and mean times for each cluster
-        fig = go.Figure(data=[
-            go.Bar(name='Median', x=solver_features, y=median_list),
-            go.Bar(name='Mean', x=solver_features, y=mean_list)
-        ])
-        # Change the bar mode
-        fig.update_layout(barmode='group', title=cluster_amount)
-        fig.show()
+        evaluation.cluster_family_amount(cluster, yhat, family_return_without_hash)
+        # evaluation.clusters_statistics(cluster, yhat, solver_return_without_hash, solver_features)
