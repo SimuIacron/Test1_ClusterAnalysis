@@ -5,6 +5,11 @@ import util
 import plotly.graph_objects as go
 
 
+# counts how often each family occurs in a cluster and returns them as a list of family names and their amounts
+# also returns the amount of elements in the cluster
+# cluster_idx: The index of the cluster to count
+# yhat: The array that describes which instances is in which cluster
+# family: List of the family of all instances
 def count_family_for_cluster(cluster_idx, yhat, family):
     familyDict = {}
     cluster_amount = 0
@@ -25,6 +30,12 @@ def count_family_for_cluster(cluster_idx, yhat, family):
 
     return keys, values, cluster_amount
 
+
+# draws a scatter plot of the clusters
+# yhat: Describes which instance is in which cluster
+# data: Features of the instances
+# solver_time: The times of the solvers for each instance
+# solver_features: Name of all solvers
 def clusters_scatter_plot(yhat, data, solver_time, solver_features):
     best_solver_time = [min(elem) for elem in solver_time]
     best_solver = [solver_features[argmin(elem)] for elem in solver_time]
@@ -36,7 +47,12 @@ def clusters_scatter_plot(yhat, data, solver_time, solver_features):
     fig.show()
 
 
-def clusters_statistics(cluster_idx, yhat, solver_time, solver_features):
+# Shows Median and Mean of the solver times for a cluster
+# cluster_idx: Index of the cluster
+# yhat: Describes which instance is in which cluster
+# solver_time: The times of the solvers for each instance
+# solver_features: Name of all solvers
+def cluster_statistics(cluster_idx, yhat, solver_time, solver_features):
     # stores the times of the instances in the current cluster
     timelist = []
     # counts how many elements are in the cluster
@@ -64,6 +80,10 @@ def clusters_statistics(cluster_idx, yhat, solver_time, solver_features):
     fig.show()
 
 
+# Shows the amount of each family in a cluster as a bar chart
+# cluster_idx: Index of the cluster
+# yhat: Describes which instance is in which cluster
+# family: List of the family of all instances
 def cluster_family_amount(cluster_idx, yhat, family):
     keys, values, cluster_amount = count_family_for_cluster(cluster_idx, yhat, family)
     sorted_keys = [x for _, x in sorted(zip(values, keys))]
@@ -76,6 +96,10 @@ def cluster_family_amount(cluster_idx, yhat, family):
     fig.show()
 
 
+# Shows bar chart where it is shown what amount of each family all clusters hold
+# clusters: list of all clusters
+# yhat: Describes which instance is in which cluster
+# family: List of the family of all instances
 def clusters_family_amount(clusters, yhat, family):
     data = []
     for cluster in clusters:
@@ -87,6 +111,13 @@ def clusters_family_amount(clusters, yhat, family):
     fig.update_layout(barmode='stack')
     fig.show()
 
+
+# shows bar chart of how many instances with timeout each cluster has
+# a instance is considered to have a timeout when all solvers timeout
+# clusters: list of all clusters
+# yhat: Describes which instance is in which cluster
+# timeout_value: The value at which the time is considered a timeout
+# solver_time: List of times each solver needs for each instance
 def clusters_timeout_amount(clusters, yhat, timeout_value, solver_time):
     not_timeout_list = []
     timeout_list = []
@@ -95,7 +126,7 @@ def clusters_timeout_amount(clusters, yhat, timeout_value, solver_time):
         not_timeout = 0
         for i in range(len(yhat)):
             if yhat[i] == cluster:
-                if min(solver_time[i]) == timeout_value:
+                if min(solver_time[i]) >= timeout_value:
                     timeout = timeout + 1
                 else:
                     not_timeout = not_timeout + 1
