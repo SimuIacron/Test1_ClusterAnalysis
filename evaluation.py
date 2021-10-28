@@ -76,7 +76,7 @@ def cluster_statistics(cluster_idx, yhat, solver_time, solver_features):
         go.Bar(name='Mean', x=solver_features, y=mean_list)
     ])
     # Change the bar mode
-    fig.update_layout(barmode='group', title=cluster_amount)
+    fig.update_layout(barmode='group', title='Cluster: ' + str(cluster_idx) + " : " + str(cluster_amount))
     fig.show()
 
 
@@ -92,7 +92,7 @@ def cluster_family_amount(cluster_idx, yhat, family):
 
     df = pd.DataFrame(dict(axis1=sorted_keys, axis2=sorted_values_ratio, values=sorted_values))
     fig = px.bar(df, x='axis1', y='axis2', hover_data=['values'])
-    fig.update_layout(title=cluster_amount)
+    fig.update_layout(title='Cluster: ' + str(cluster_idx) + " : " + str(cluster_amount))
     fig.show()
 
 

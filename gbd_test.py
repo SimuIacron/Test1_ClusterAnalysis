@@ -7,6 +7,7 @@ import biclustering
 import clustering
 import evaluation
 import feature_reduction
+import scaling
 import util
 
 # path to the databases
@@ -117,25 +118,14 @@ with GBD(db_path) as gbd:
     # scaling
     print("Start scaling...")
 
-    scaler = StandardScaler()
-    scaler.fit(instances_list)
-    instances_list_s = scaler.transform(instances_list)
+    instances_list_s = scaling.scaling(instances_list, algorithm='SCALEMINUSPLUS1')
 
-    # rotate list, so each list contains values of one feature
-    # instances_list_t = util.rotateNestedLists(instances_list)
-    # instances_list_t_s = []
-    # for j in instances_list_t:
-    #     l_s = util.scaleArrayTo01(j)
-    #     instances_list_t_s.append(l_s)
-
-    # undo rotation to get scaled list of the instances
-    # instances_list_s = util.rotateNestedLists(instances_list_t_s)
     print("Scaling finished")
 
     print("Starting clustering...")
 
     # reduce dimensions
-    reduced_instance_list = feature_reduction.featureReduction(instances_list_s, algorithm="PCA", features=50)
+    reduced_instance_list = feature_reduction.feature_reduction(instances_list_s, algorithm="PCA", features=50)
 
     # fig = px.imshow(util.rotateNestedLists(pca_instance))
     # fig.show()
@@ -152,9 +142,9 @@ with GBD(db_path) as gbd:
     evaluation.clusters_scatter_plot(yhat, reduced_instance_list, solver_return_without_hash, solver_features)
 
     # calculate means and median for each cluster
-    #for cluster in clusters:
-        #evaluation.cluster_family_amount(cluster, yhat, family_return_without_hash)
-        # evaluation.cluster_statistics(cluster, yhat, solver_return_without_hash, solver_features)
+    for cluster in clusters:
+        evaluation.cluster_family_amount(cluster, yhat, family_return_without_hash)
+        evaluation.cluster_statistics(cluster, yhat, solver_return_without_hash, solver_features)
 
     evaluation.clusters_family_amount(clusters, yhat, family_return_without_hash)
     evaluation.clusters_timeout_amount(clusters, yhat, timeout_value, solver_return_without_hash)
