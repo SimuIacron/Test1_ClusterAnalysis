@@ -122,29 +122,28 @@ with GBD(db_path) as gbd:
 
     print("Scaling finished")
 
+    # reduce dimensions
+    reduced_instance_list = feature_reduction.feature_reduction(instances_list_s, algorithm="VARIANCE", features=None,
+                                                                variance=0.8)
+    print('Remaining features: ' + str(len(reduced_instance_list[0])))
+
     print("Starting clustering...")
 
-    # reduce dimensions
-    reduced_instance_list = feature_reduction.feature_reduction(instances_list_s, algorithm="PCA", features=50)
-
-    # fig = px.imshow(util.rotateNestedLists(pca_instance))
+    # biclustering
+    # fit_data = biclustering.bicluster(reduced_instance_list, "SPECTRALBI")
+    # fig = px.imshow(util.rotateNestedLists(fit_data))
     # fig.show()
 
-    # biclustering
-    fit_data = biclustering.bicluster(reduced_instance_list, "SPECTRALBI")
-    fig = px.imshow(util.rotateNestedLists(fit_data))
-    fig.show()
-
     # clustering
-    (clusters, yhat) = clustering.cluster(reduced_instance_list, "KMEANS")
+    (clusters, yhat) = clustering.cluster(reduced_instance_list, "DBSCAN")
     print("Clustering finished")
 
     evaluation.clusters_scatter_plot(yhat, reduced_instance_list, solver_return_without_hash, solver_features)
 
     # calculate means and median for each cluster
-    for cluster in clusters:
-        evaluation.cluster_family_amount(cluster, yhat, family_return_without_hash)
-        evaluation.cluster_statistics(cluster, yhat, solver_return_without_hash, solver_features)
+    # for cluster in clusters:
+    #     evaluation.cluster_family_amount(cluster, yhat, family_return_without_hash)
+    #     evaluation.cluster_statistics(cluster, yhat, solver_return_without_hash, solver_features)
 
     evaluation.clusters_family_amount(clusters, yhat, family_return_without_hash)
     evaluation.clusters_timeout_amount(clusters, yhat, timeout_value, solver_return_without_hash)
